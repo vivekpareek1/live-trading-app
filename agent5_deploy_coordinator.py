@@ -1,122 +1,82 @@
-
-# AGENT 5 - PRE-CONFIGURED FOR VIVEK
-# GitHub: https://github.com/vivekpareek1/live-trading-app
-# AWS: 13.203.203.170
-# Key: Khushi@1310 -> rename to Khushi1310.pem
-
-import subprocess, time, json
-from datetime import datetime
+import time
+import subprocess
 import os
+from datetime import datetime
 
 class Agent5_DeployCoordinator:
     def __init__(self):
-        self.github_repo = "https://github.com/vivekpareek1/live-trading-app.git"
-        self.aws_ip = "13.203.203.170"
-        self.aws_key = "./Khushi1310.pem"  # Rename your key file!
-        self.status = {}
-    
-    def check_key(self):
-        # Key file name me @ hai - rename karna better hai
-        if not os.path.exists(self.aws_key):
-            print(f"WARNING: Key file {self.aws_key} nahi mila")
-            print(f"Tumhari file Khushi@1310 hai - isko rename karo:")
-            print(f"mv 'Khushi@1310' Khushi1310.pem")
-            print(f"chmod 400 Khushi1310.pem")
-            return False
-        return True
-
-    def git_upload(self, msg="Deploy by Agent5"):
-        print(f"[{datetime.now()}] Git Upload to https://github.com/vivekpareek1/live-trading-app...")
+        self.repo_path = "/home/ubuntu/live-trading-app"
+        os.chdir(self.repo_path)
+        
+    def run_cmd(self, cmd, shell=False):
         try:
-            subprocess.run(["git", "add", "."], check=True)
-            subprocess.run(["git", "commit", "-m", msg], check=True)
-            subprocess.run(["git", "push", "origin", "main"], check=True)
-            self.status["git"] = "SUCCESS"
-            print("✅ Git Upload SUCCESS")
-            return True
-        except Exception as e:
-            print(f"❌ Git FAIL: {e}")
-            self.status["git"] = str(e)
-            return False
-    
-    def aws_deploy(self):
-        print(f"[{datetime.now()}] AWS Deploy to {self.aws_ip} - Ports 22,8000,500 open")
-        if not self.check_key():
-            return False
-        try:
-            ssh_base = f"ssh -i {self.aws_key} -o StrictHostKeyChecking=no ubuntu@{self.aws_ip}"
-            aws_cmd = f"""
-            cd ~/live-trading-app 2>/dev/null || git clone https://github.com/vivekpareek1/live-trading-app.git ~/live-trading-app
-            cd ~/live-trading-app
-            git pull origin main
-            pip3 install -r requirements.txt -q
-            pkill -f agent4_FINAL_ADAPTIVE.py; pkill -f main.py; sleep 2
-            chmod +x deploy.sh
-            nohup python3 agent4_FINAL_ADAPTIVE.py > agent4.log 2>&1 &
-            nohup python3 main.py > live.log 2>&1 &
-            sleep 3
-            echo "DEPLOYED_SUCCESS"
-            ps aux | grep python | grep -v grep
-            """
-            full = f'{ssh_base} "{aws_cmd}"'
-            result = subprocess.run(full, shell=True, capture_output=True, text=True, timeout=90)
-            print(result.stdout)
-            if "DEPLOYED_SUCCESS" in result.stdout:
-                self.status["aws"] = "SUCCESS"
-                print("✅ AWS Deploy SUCCESS")
-                return True
+            if shell:
+                result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=60)
             else:
-                print(f"❌ AWS FAIL: {result.stderr}")
-                self.status["aws"] = result.stderr
-                return False
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            return result.returncode == 0, result.stdout + result.stderr
         except Exception as e:
-            print(f"❌ AWS FAIL: {e}")
-            self.status["aws"] = str(e)
-            return False
-
-    def test(self):
-        print(f"[{datetime.now()}] Testing on {self.aws_ip}...")
-        try:
-            ssh = f"ssh -i {self.aws_key} ubuntu@{self.aws_ip}"
-            cmd = f'{ssh} "cd ~/live-trading-app && cat agent4_adaptive_result.json 2>/dev/null; echo ---LOGS---; tail -10 live.log; tail -10 agent4.log"'
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
-            print(result.stdout)
-            if "agent4" in result.stdout.lower() or "market" in result.stdout.lower():
-                self.status["test"] = "SUCCESS"
-                print("✅ Test SUCCESS")
-                return True
-            else:
-                self.status["test"] = "FAIL"
-                return False
-        except Exception as e:
-            self.status["test"] = str(e)
-            return False
+            return False, str(e)
 
     def full_deploy(self):
-        print("\n🚀 FULL AUTO DEPLOY - vivekpareek1/live-trading-app -> 13.203.203.170")
-        print("Ports: 22 (SSH), 8000, 500 open\n")
-        g = self.git_upload()
-        time.sleep(2)
-        a = self.aws_deploy() if g else False
-        time.sleep(5)
-        t = self.test() if a else False
+        print(f"\n🚀 Agent5 - GitHub First PULL Mode - {datetime.now()}")
+        print(f"Mode: Pull from GitHub -> Restart Services")
+        
+        print("\n[1/4] Git Pull from GitHub...")
+        self.run_cmd(["git", "config", "user.email", "vivekpareek1@gmail.com"])
+        self.run_cmd(["git", "config", "user.name", "Vivek Pareek"])
+        self.run_cmd(["git", "config", "pull.rebase", "false"])
+        
+        success, out = self.run_cmd(["git", "fetch", "origin"])
+        success, out = self.run_cmd(["git", "pull", "origin", "main"])
+        print(f"Pull: {out[:500]}")
+        git_ok = success
+        
+        print("\n[2/4] Restarting services...")
+        for svc in ["trading-main", "trading-agent4", "trading-dashboard"]:
+            self.run_cmd(["sudo", "systemctl", "restart", svc])
+            time.sleep(2)
+            s, o = self.run_cmd(["sudo", "systemctl", "is-active", svc])
+            print(f"{svc}: {o.strip()}")
+        
+        print("\n[3/4] Fixing Dashboard...")
+        self.run_cmd("pkill -f dashboard.py", shell=True)
+        time.sleep(1)
+        self.run_cmd("sudo fuser -k 5000/tcp", shell=True)
+        time.sleep(1)
+        s, o = self.run_cmd(["sudo", "systemctl", "is-active", "trading-dashboard"])
+        if "active" not in o:
+            print("Dashboard service down, manual start...")
+            self.run_cmd("nohup python3 dashboard.py > dashboard.log 2>&1 &", shell=True)
+            time.sleep(3)
+        
+        success, out = self.run_cmd(["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", "http://localhost:5000"])
+        dashboard_ok = "200" in out
+        print(f"Dashboard HTTP: {out} - OK={dashboard_ok}")
+        
+        success, out = self.run_cmd(["ps", "aux"])
+        print(f"\n[4/4] Processes:")
+        for line in out.split("\n"):
+            if "python3" in line and ("main.py" in line or "agent4" in line or "dashboard" in line):
+                print(line[:150])
         
         report = f"""
 === DEPLOY REPORT - {datetime.now()} ===
-Repo: https://github.com/vivekpareek1/live-trading-app
-AWS: 13.203.203.170
-Ports: 22, 8000, 500
-Git: {'✅' if g else '❌'} {self.status.get('git','')}
-AWS: {'✅' if a else '❌'} {self.status.get('aws','')}
-Test: {'✅' if t else '❌'} {self.status.get('test','')}
-
-Check live: ssh -i Khushi1310.pem ubuntu@13.203.203.170 "tail -f ~/live-trading-app/agent4.log"
+Mode: GitHub First -> AWS Pull Only
+Git Pull: {"✅ SUCCESS" if git_ok else "❌ FAIL"}
+Dashboard: {"✅ RUNNING" if dashboard_ok else "❌ DOWN - check dashboard.log"}
 """
         print(report)
         with open("deploy_report.txt", "w") as f:
             f.write(report)
-        return g and a and t
+        return git_ok
 
 if __name__ == "__main__":
     agent = Agent5_DeployCoordinator()
-    agent.full_deploy()
+    while True:
+        try:
+            agent.full_deploy()
+        except Exception as e:
+            print(f"Error: {e}")
+        print("\nSleep 60 sec... GitHub First mode")
+        time.sleep(60)

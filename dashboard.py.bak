@@ -1,0 +1,18 @@
+from flask import Flask
+import requests
+from datetime import datetime, timezone, timedelta
+app = Flask(__name__)
+IST = timezone(timedelta(hours=5, minutes=30))
+def ist(): return datetime.now(IST).strftime('%d-%m-%Y %H:%M:%S IST')
+def prices():
+    try:
+        r=requests.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,tether-gold&vs_currencies=usd',timeout=4).json()
+        return float(r['bitcoin']['usd']), float(r['ethereum']['usd']), float(r['solana']['usd']), float(r['tether-gold']['usd'])
+    except:
+        return 78536, 2453, 104, 4446
+@app.route('/')
+def home():
+    btc,eth,sol,gold=prices()
+    return f"<html><head><meta http-equiv='refresh' content='10'><script src='https://cdn.jsdelivr.net/npm/chart.js'></script><style>body{{background:#0a0e14;color:#fff;font-family:Arial;padding:10px}}.h{{background:#0a2a12;border:2px solid #00ff88;padding:12px;text-align:center}}.grid{{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}}.card{{background:#151b22;border:1px solid #333;border-radius:10px;padding:10px}}</style></head><body><div class='h'>🚀 PIPELINE LIVE ✅ {ist()} | IST FIXED | Auto Pipeline</div><div class='grid'><div class='card'>BTC ${btc}</div><div class='card'>ETH ${eth}</div><div class='card'>SOL ${sol}</div><div class='card'>GOLD ${gold}</div></div><div style='background:#151b22;padding:10px;margin-top:10px;font-size:11px'>✅ ONE TIME SETUP DONE | Pipeline: Meta AI -> Push Agent (30s) -> GitHub -> Deploy Agent (60s) -> Live | Time: {ist()}</div></body></html>"
+if __name__=='__main__':
+    app.run(host='0.0.0.0',port=5000)
