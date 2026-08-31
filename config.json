@@ -1,0 +1,13 @@
+
+{
+  "equity": 96883,
+  "daily_stop": -700,
+  "risk_a_plus": 0.005,
+  "risk_b": 0.0025,
+  "fvg_max_age": 20,
+  "volume_multiplier": 1.5,
+  "manipulation_volume": 2.5,
+  "mode": "PAPER",
+  "real_start_amount": 50,
+  "report_language": "Hindi"
+}
