@@ -1,9 +1,9 @@
 
-=== DEPLOY REPORT - 2026-08-31 11:03:09.777953 ===
+=== DEPLOY REPORT - 2026-08-31 11:03:32.395897 ===
 Repo: https://github.com/vivekpareek1/live-trading-app
 AWS: 13.203.203.170
 Ports: 22, 8000, 500
-Git: ✅ SUCCESS
+Git: ❌ Command '['git', 'push', 'origin', 'main']' returned non-zero exit status 128.
 AWS: ❌ 
 Test: ❌ 
 
